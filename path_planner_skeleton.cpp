@@ -8,58 +8,64 @@
 
 static const int ROWS = 600;
 static const int COLS = 800;
-static const int BOT_ID = 0;
+static const std::string BOT_ID = getenv("BOT_ID");
 
 struct Bot{
   int id;
   int x;
   int y;
-
-  Bot(int i, int j, int k){
-    id = i;
-    x = j;
-    y = k;
-  }
+  float theta;
 }
 
-geometry_msgs::PoseArray res;
-std::vector<Bot> activeBots;
+geometry_msgs::Pose msg;
+Bot activeBots[3];
 
-void callback(const AprilTagDetectionArray& msg){
-  int i = 0;
-  activeBots.clear();
-  for(std::vector<AprilTags::AprilTagDetection>::const_iterator it = msg->detections.begin(); it != msg->detections.end(); ++it){
-    AprilTags::AprilTagDetection temp = *it;
-    activeBots.push_back(Bot( temp.id, (int) temp.pose.pose.position.x, (int) temp.pose.pose.position.y));
-    ++i;
-  }
+void cb1(const geometry_msgs::Pose& _msg){
+  activeBots[0].id = 1;
+  activeBots[0].x = _msg->position.x;
+  activeBots[0].y = _msg->position.y;
+  activeBots[0].theta = _msg->orientation.z;
 }
-
+void cb2(const geometry_msgs::Pose& _msg){
+  activeBots[1].id = 2;
+  activeBots[1].x = _msg->position.x;
+  activeBots[1].y = _msg->position.y;
+  activeBots[1].theta = _msg->orientation.z;
+}
+void cb3(const geometry_msgs::Pose& _msg){
+  activeBots[2].id = 3;
+  activeBots[2].x = _msg->position.x;
+  activeBots[2].y = _msg->position.y;
+  activeBots[2].theta = _msg->orientation.z;
+}
 void path_planner(){
-  
-}
 
-void inserWayPoint(int x, int y){
-  geometrt_msgs::Pose pose;
-  pose.pose.position.x = x;
-  pose.pose.position.y = y;
-  res.poses.push_back(pose.pose);
+
+  /*
+    You need to set the following, at the least :
+    msg.position.x
+    msg.position.y
+
+    The pose value can be found in the activeBots.
+   */
 }
 
 int main(){
   ros::init(argc, argv, "listener");
   ros::NodeHandle n;
-  ros::Subscriber sub = n.subscribe("tag_detections", 10, callback);
-  ros::Publisher chatter_pub = n.advertise<geometry_msgs::PoseArray>("wayPoints", 1000);
+  std::string bot1 = "/bot1/pose";
+  std::string bot2 = "/bot2/pose";
+  std::string bot3 = "/bot3/pose";
+  
+  ros::Subscriber sub_bot1 = n.subscribe(bot1, 10, cb1);
+  ros::Subscriber sub_bot2 = n.subscribe(bot2, 10, cb2);
+  ros::Subscriber sub_bot3 = n.subscribe(bot3, 10, cb3);
+  
+  ros::Publisher nextPoint = n.advertise<geometry_msgs::Pose>("nextPoint", 1000);
   ros::Rate loop_rate(10);
-
   while(ros::ok()){
-    res.poses.clear();
-    res.header.stamp = ros::Time::now();
-    res.header.fram_id = "/map";
-    
     path_planner();
-    chatter_pub.publish(res);
+    chatter_pub.publish(msg);
     ros::spinOnce();
     loop_rate.sleep();
   }
